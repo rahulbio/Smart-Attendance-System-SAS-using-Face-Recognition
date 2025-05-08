@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Schedule Details</title>
+  <style>
+    body {
+      
+      margin: 0;
+      font-family: 'Arial', sans-serif;
+      background-color: #f5f6fa;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+    .header {
+    background-color: #c80c4c;
+    color: white;
+    padding: 10px 20px; /* Reduced padding */
+    display: flex;
+    justify-content: center; /* Center the title image */
+    align-items: center;
+    position: relative; /* Needed for absolute positioning */
+    box-shadow: 0px 3px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .logo {
+    height: 40px; /* Reduced size */
+    position: absolute;
+    left: 20px; /* Keep the logo on the left */
+  }
+
+  .title {
+    height: 40px; /* Adjusted for consistency */
+  }
+   
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0px 10px 30px rgba(160, 23, 54, 0.2);
+      text-align: center;
+      width: 750px;
+      margin: 30px auto;
+    }
+    .schedule-info {
+      background: #fff5f7;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0px 5px 10px rgba(160, 23, 54, 0.15);
+      display: flex;
+      justify-content: space-evenly;
+    }
+    .field {
+      flex: 1;
+      min-width: 120px;
+    }
+    .field-label {
+      font-weight: bold;
+      color: #a01736;
+    }
+    .field-value {
+      color: #333;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0px 5px 15px rgba(160, 23, 54, 0.15);
+    }
+    th, td {
+      padding: 12px;
+      border-bottom: 1px solid #ddd;
+      font-size: 16px;
+      text-align: center;
+    }
+    th {
+      background-color: #a01736;
+      color: white;
+    }
+    .button-group {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+    }
+    button {
+      background: white;
+      color: #a01736;
+      border: 2px solid #a01736;
+      padding: 8px 12px;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: 0.3s;
+    }
+    button:hover {
+      background: #a01736;
+      color: white;
+    }
+    .hidden {
+      display: none;
+    }
+    .verified {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+    #summary {
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #a01736;
+    }
+    /* Admin Modal Styles */
+    #adminModal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    #adminModal.hidden {
+      display: none;
+    }
+    .modal-content {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+      width: 300px;
+      box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.3);
+    }
+    .modal-content input {
+      width: 100%;
+      padding: 8px;
+      margin: 10px 0;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .modal-content button {
+      margin: 5px;
+      padding: 8px 12px;
+      border: 2px solid #a01736;
+      background: white;
+      color: #a01736;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    .modal-content button:hover {
+      background: #a01736;
+      color: white;
+    }
+    /* Attendance Submission Modal Styles */
+    #attendanceModal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    #attendanceModal.hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <img src="/logo.jpg" alt="Logo" class="logo" />
+    <img src="/title.png" alt="Title" class="title" />
+  </div>
+  
+  <div class="container">
+    <h2>Schedule Details</h2>
+    <div id="scheduleInfo" class="schedule-info"></div>
+    <h3>Students</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Roll Number</th>
+          <th>Action</th>
+          <th>Verification</th>
+        </tr>
+      </thead>
+      <tbody id="studentTable"></tbody>
+    </table>
+    <div id="cameraContainer"></div>
+    <p id="summary"></p>
+    <!-- New Submit Attendance Button -->
+    <button id="submitAttendanceBtn" onclick="openAttendanceModal()">Submit Attendance</button>
+  </div>
+
+  <!-- Existing Admin Login Modal (for individual student verification) -->
+  <div id="adminModal" class="hidden">
+    <div class="modal-content">
+      <h3>Admin Login</h3>
+      <input type="text" id="adminUsername" placeholder="Admin Username" />
+      <input type="password" id="adminPassword" placeholder="Password" />
+      <div>
+        <button onclick="submitAdmin()">Submit</button>
+        <button onclick="closeAdminModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- New Attendance Submission Modal -->
+  <div id="attendanceModal" class="hidden">
+    <div class="modal-content">
+      <h3>Admin Login</h3>
+      <input type="text" id="attendanceAdminUsername" placeholder="Admin Username" />
+      <input type="password" id="attendanceAdminPassword" placeholder="Password" />
+      <div>
+        <button onclick="submitAttendanceUpdate()">Submit</button>
+        <button onclick="closeAttendanceModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let activeStream = null;
+    let videoElement = null;
+    let attempts = {};
+    let totalStudents = 0, verifiedCount = 0, failedCount = 0, adminCalledCount = 0;
+    let currentAdminStudent = null; // To keep track of the student for which admin was called.
+
+    const scheduleData = JSON.parse(localStorage.getItem("scheduleData"));
+
+    if (scheduleData) {
+      // Extract from and to times from the stored slot (format "HH:MM - HH:MM")
+      const times = scheduleData.slot.split(" - ");
+      const fromTime = times[0];
+      const toTime = times[1];
+
+      document.getElementById("scheduleInfo").innerHTML = `
+        <div class="field">
+          <span class="field-label">Date:</span>
+          <span class="field-value">${scheduleData.date}</span>
+        </div>
+        <div class="field">
+          <span class="field-label">From:</span>
+          <span class="field-value">${fromTime}</span>
+        </div>
+        <div class="field">
+          <span class="field-label">To:</span>
+          <span class="field-value">${toTime}</span>
+        </div>
+        <div class="field">
+          <span class="field-label">Class:</span>
+          <span class="field-value">${scheduleData.className}</span>
+        </div>
+        <div class="field">
+          <span class="field-label">Subject:</span>
+          <span class="field-value">${scheduleData.subject}</span>
+        </div>
+      `;
+
+      totalStudents = scheduleData.students.length;
+      const studentTable = document.getElementById("studentTable");
+
+      scheduleData.students.forEach(student => {
+        attempts[student.name] = 0;
+        const row = document.createElement("tr");
+        row.setAttribute("id", `row-${student.name}`);
+        row.innerHTML = `
+          <td>${student.name}</td>
+          <td>${student.roll_number}</td>
+          <td>
+            <div class="button-group">
+              <button id="btn-${student.name}" onclick="toggleCamera('${student.name}')">📷</button>
+              <button id="admin-${student.name}" class="hidden" onclick="callAdmin('${student.name}')">Call Admin?</button>
+            </div>
+          </td>
+          <td id="result-${student.name}">Not Verified</td>
+        `;
+        studentTable.appendChild(row);
+      });
+    }
+
+    function toggleCamera(studentName) {
+      if (activeStream) {
+        activeStream.getTracks().forEach(track => track.stop());
+        activeStream = null;
+        if (videoElement) {
+          videoElement.remove();
+          videoElement = null;
+        }
+        return;
+      }
+
+      videoElement = document.createElement("video");
+      videoElement.setAttribute("autoplay", "");
+      document.getElementById("cameraContainer").appendChild(videoElement);
+
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+          activeStream = stream;
+          videoElement.srcObject = stream;
+          setTimeout(() => takePicture(studentName), 2000);
+        })
+        .catch(err => console.error("Error accessing camera:", err));
+    }
+
+    function takePicture(studentName) {
+      const canvas = document.createElement("canvas");
+      canvas.width = videoElement.videoWidth;
+      canvas.height = videoElement.videoHeight;
+      const context = canvas.getContext("2d");
+      context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+
+      canvas.toBlob(blob => {
+        const formData = new FormData();
+        formData.append("image", blob, `${studentName}.png`);
+
+        fetch("/upload", { method: "POST", body: formData })
+          .then(response => response.json())
+          .then(data => {
+            const expected = studentName;
+            const detected = data.result || "Unknown";
+            const resultCell = document.getElementById(`result-${studentName}`);
+            const camButton = document.getElementById(`btn-${studentName}`);
+            const adminButton = document.getElementById(`admin-${studentName}`);
+            const row = document.getElementById(`row-${studentName}`);
+
+            if (data.success && detected === expected) {
+              verifiedCount++;
+              row.classList.add("verified");
+              resultCell.innerText = `✅ Verified: ${detected}`;
+              camButton.disabled = true;
+              adminButton.classList.add("hidden");
+            } else {
+              attempts[studentName]++;
+              resultCell.innerText = `❌ Expected: ${expected}, Detected: ${detected}`;
+              adminButton.classList.remove("hidden");
+            }
+            updateSummary();
+          });
+      });
+
+      activeStream.getTracks().forEach(track => track.stop());
+      videoElement.remove();
+      activeStream = null;
+    }
+
+    function updateSummary() {
+      document.getElementById("summary").innerText = `✅ Verified: ${verifiedCount}/${totalStudents}`;
+    }
+
+    // Functions for Existing Admin Modal (for individual student verification)
+    function callAdmin(studentName) {
+      currentAdminStudent = studentName;
+      document.getElementById("adminModal").classList.remove("hidden");
+    }
+
+    function closeAdminModal() {
+      document.getElementById("adminModal").classList.add("hidden");
+    }
+
+    function submitAdmin() {
+      const username = document.getElementById("adminUsername").value;
+      const password = document.getElementById("adminPassword").value;
+      if (username && password) {
+        fetch("/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: username, password: password })
+        })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              const resultCell = document.getElementById(`result-${currentAdminStudent}`);
+              const camButton = document.getElementById(`btn-${currentAdminStudent}`);
+              const adminButton = document.getElementById(`admin-${currentAdminStudent}`);
+              const row = document.getElementById(`row-${currentAdminStudent}`);
+              verifiedCount++;
+              row.classList.add("verified");
+              resultCell.innerText = `✅ Verified: ${currentAdminStudent} (Admin)`;
+              camButton.disabled = true;
+              adminButton.classList.add("hidden");
+              updateSummary();
+              closeAdminModal();
+            } else {
+              alert("Invalid email or password.");
+            }
+          })
+          .catch(err => {
+            console.error("Error during admin login:", err);
+            alert("An error occurred during admin login.");
+          });
+      } else {
+        alert("Please enter both username and password.");
+      }
+    }
+
+    // New Functions for Attendance Submission Modal
+    function openAttendanceModal() {
+      document.getElementById("attendanceModal").classList.remove("hidden");
+    }
+
+    function closeAttendanceModal() {
+      document.getElementById("attendanceModal").classList.add("hidden");
+    }
+
+    function submitAttendanceUpdate() {
+      const username = document.getElementById("attendanceAdminUsername").value;
+      const password = document.getElementById("attendanceAdminPassword").value;
+      if (username && password) {
+        fetch("/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: username, password: password })
+        })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              // Gather names of all verified students without disrupting existing logic
+              let verifiedStudents = [];
+              scheduleData.students.forEach(student => {
+                let row = document.getElementById(`row-${student.name}`);
+                if (row && row.classList.contains("verified")) {
+                  verifiedStudents.push(student.name);
+                }
+              });
+              // Send the verified student details along with schedule data to update the database
+              fetch("/updateAttendance", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  date: scheduleData.date,
+                  className: scheduleData.className,
+                  subject: scheduleData.subject,
+                  fromTime: scheduleData.slot.split(" - ")[0],
+                  toTime: scheduleData.slot.split(" - ")[1],
+                  verifiedStudents: verifiedStudents,
+                })
+              })
+                .then(response => response.json())
+                .then(updateData => {
+                  if (updateData.success) {
+                    alert("Attendance updated successfully");
+                    window.location.href = "login.html";
+                  } else {
+                    alert("Attendance update failed, Please Try again!");
+                  }
+                  closeAttendanceModal();
+                })
+                .catch(err => {
+                  console.error("Error updating attendance:", err);
+                  alert("An error occurred during attendance update.");
+                  closeAttendanceModal();
+                });
+            } else {
+              alert("Invalid email or password.");
+            }
+          })
+          .catch(err => {
+            console.error("Error during admin login:", err);
+            alert("An error occurred during admin login.");
+          });
+      } else {
+        alert("Please enter both username and password.");
+      }
+    }
+  </script>
+</body>
+</html>

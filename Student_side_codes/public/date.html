@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Arial', sans-serif;
+      background-color: #f5f6fa;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      position: relative;
+      overflow: hidden;
+    }
+    /* Video Background */
+    .video-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: -1;
+    }
+    .header {
+    background-color: #c80c4c;
+    color: white;
+    padding: 10px 20px; /* Reduced padding */
+    display: flex;
+    justify-content: center; /* Center the title image */
+    align-items: center;
+    position: relative; /* Needed for absolute positioning */
+    box-shadow: 0px 3px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .logo {
+    height: 40px; /* Reduced size */
+    position: absolute;
+    left: 20px; /* Keep the logo on the left */
+  }
+
+  .title {
+    height: 40px; /* Adjusted for consistency */
+  }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      width: 400px;
+      margin: auto;
+      margin-top: 60px;
+      position: relative;
+      z-index: 1;
+    }
+    h2 {
+      color: #a01736;
+      font-size: 26px;
+      margin-bottom: 15px;
+      font-weight: bold;
+    }
+    label {
+      color: #a01736;
+      font-size: 16px;
+      font-weight: 600;
+      display: block;
+      margin: 10px 0 5px;
+      text-align: left;
+    }
+    input, select {
+      width: 100%;
+      padding: 12px;
+      margin: 5px 0 15px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: border 0.3s ease-in-out;
+      outline: none;
+      background: white;
+      cursor: pointer;
+    }
+    select:focus, input:focus {
+      border-color: #a01736;
+    }
+    .submit-btn {
+      background: white;
+      color: #a01736;
+      border: 2px solid #a01736;
+      padding: 12px 25px;
+      cursor: pointer;
+      border-radius: 8px;
+      font-size: 18px;
+      font-weight: bold;
+      transition: all 0.3s ease-in-out;
+      width: 100%;
+      margin-top: 10px;
+    }
+    .submit-btn:hover {
+      background: #a01736;
+      color: white;
+      box-shadow: 0px 4px 10px rgba(160, 23, 54, 0.4);
+    }
+    @media (max-width: 500px) {
+      .container {
+        width: 90%;
+        padding: 20px;
+      }
+      .header {
+        padding: 15px;
+      }
+      .header img {
+        height: 40px;
+      }
+      .submit-btn {
+        font-size: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Video Background -->
+  <video autoplay muted loop class="video-bg">
+    <source src="/background.mp4" type="video/mp4" />
+    Your browser does not support the video tag.
+  </video>
+
+  <div class="header">
+    <img src="/logo.jpg" alt="Logo" class="logo" />
+    <img src="/title.png" alt="Title" class="title" />
+  </div>
+  
+
+  <div class="container">
+    <h2>Welcome Admin</h2>
+    <!-- Date input is now restricted and auto-refreshes when changed -->
+    <label>Choose Date</label>
+    <input type="date" id="date" onchange="onDateChange()" />
+
+    <!-- Options container: subject and slot selection (initially hidden) -->
+    <div id="optionsContainer" style="display:none;">
+      <label>Select Subject</label>
+      <select id="subject-dropdown"></select>
+
+      <label>Select Slot</label>
+      <select id="slot-dropdown"></select>
+    </div>
+
+    <!-- "Next" button initially loads the options if not already loaded -->
+    <button class="submit-btn" id="loadOptionsBtn" onclick="loadOptions()">Next</button>
+    <button class="submit-btn" id="submitScheduleBtn" style="display:none;" onclick="submitSchedule()">Submit</button>
+
+    <div id="result" style="margin-top: 20px; text-align: left;"></div>
+  </div>
+
+  <script>
+    // Global variable to store the subjects options returned from the server
+    window.subjectOptions = [];
+
+    // Set the min and max for the date picker to only allow today and tomorrow.
+    window.addEventListener("DOMContentLoaded", () => {
+      const dateInput = document.getElementById("date");
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+      
+      const toYYYYMMDD = dateObj => dateObj.toISOString().split('T')[0];
+      dateInput.min = toYYYYMMDD(today);
+      dateInput.max = toYYYYMMDD(tomorrow);
+    });
+
+    // Called when the date input changes. It resets the options and auto-loads new options.
+    function onDateChange() {
+      // Clear current options (if any)
+      document.getElementById("optionsContainer").style.display = "none";
+      document.getElementById("submitScheduleBtn").style.display = "none";
+      document.getElementById("loadOptionsBtn").style.display = "block";
+      // Optionally, auto-load new options:
+      loadOptions();
+    }
+
+    // Load available schedule options by date
+    async function loadOptions() {
+      const date = document.getElementById("date").value;
+      if (!date) {
+        alert("Please select a date.");
+        return;
+      }
+      
+      console.log("Selected date:", date);
+
+      try {
+        const response = await fetch('http://localhost:3000/getOptionsByDate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date })
+        });
+        
+        console.log("Response status:", response.status);
+        const data = await response.json();
+        console.log("Response data:", data);
+
+        if (data.success) {
+          // Store the returned subjects options globally
+          window.subjectOptions = data.subjects;
+
+          const subjectDropdown = document.getElementById("subject-dropdown");
+          subjectDropdown.innerHTML = "";
+          window.subjectOptions.forEach((subjectOption, index) => {
+            const option = document.createElement("option");
+            option.value = index;
+            // Display both subject name and class
+            option.innerText = `${subjectOption.subject} (${subjectOption.class})`;
+            subjectDropdown.appendChild(option);
+          });
+
+          // Populate the time slots for the initially selected subject
+          populateSlots(window.subjectOptions[0]);
+
+          // When the subject changes, update the slot options
+          subjectDropdown.addEventListener("change", function () {
+            populateSlots(window.subjectOptions[this.value]);
+          });
+
+          // Show options container and adjust button visibility
+          document.getElementById("optionsContainer").style.display = "block";
+          document.getElementById("loadOptionsBtn").style.display = "none";
+          document.getElementById("submitScheduleBtn").style.display = "block";
+        } else {
+          alert(data.message);
+        }
+      } catch (error) {
+        console.error("Error in loadOptions:", error);
+        alert("Error fetching schedule options. Check console for details.");
+      }
+    }
+
+    // Populate the slots dropdown for a given subject option
+    function populateSlots(subjectOption) {
+      const slotDropdown = document.getElementById("slot-dropdown");
+      slotDropdown.innerHTML = "";
+      subjectOption.slots.forEach(slot => {
+        const option = document.createElement("option");
+        option.value = slot;
+        option.innerText = slot;
+        slotDropdown.appendChild(option);
+      });
+    }
+
+    // Submit the final schedule selection
+    async function submitSchedule() {
+      const date = document.getElementById("date").value;
+      const subjectDropdown = document.getElementById("subject-dropdown");
+      const selectedIndex = subjectDropdown.value;
+      const selectedSubject = window.subjectOptions[selectedIndex];
+      const slot = document.getElementById("slot-dropdown").value;
+
+      console.log("Submitting schedule:", {
+        date,
+        subject: selectedSubject.subject,
+        className: selectedSubject.class,
+        slot
+      });
+
+      try {
+        const response = await fetch('http://localhost:3000/getSchedule', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            date,
+            subject: selectedSubject.subject,
+            className: selectedSubject.class,
+            slot
+          })
+        });
+
+        const data = await response.json();
+        console.log("Submit response data:", data);
+        if (data.success) {
+          localStorage.setItem("scheduleData", JSON.stringify({
+            date,
+            className: selectedSubject.class,
+            subject: selectedSubject.subject,
+            slot,
+            students: data.students
+          }));
+          window.location.href = "name.html";
+        } else {
+          alert(data.message);
+        }
+      } catch (error) {
+        console.error("Error in submitSchedule:", error);
+        alert("Error submitting schedule. Check console for details.");
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Attendify - Login</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Arial', sans-serif;
+    }
+    /* Background Video */
+    #bg-video {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: -1;
+    }
+    body {
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      position: relative;
+      background: #f5f6fa;
+    }
+    .logo {
+      position: absolute;
+      top: 30px;
+      left: 30px;
+      width: 80px;
+      height: auto;
+    }
+    .top-section {
+      position: absolute;
+      top: 10px;
+      left: 30px;
+    }
+    .title {
+      max-width: 300px;
+    }
+    .login-container {
+      text-align: center;
+    }
+    .login-btn {
+      background-color: #fff;
+      border: 2px solid #800000;
+      color: #800000;
+      font-size: 1.2rem;
+      padding: 0.8rem 2rem;
+      cursor: pointer;
+      border-radius: 50px;
+      font-weight: bold;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+    .login-btn:hover {
+      background-color: #800000;
+      color: #fff;
+    }
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .login-box {
+      background: #fff;
+      padding: 2rem 3rem;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+      text-align: center;
+      width: 90%;
+      max-width: 400px;
+      position: relative;
+      animation: fadeIn 0.4s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .login-box h2 {
+      color: #800000;
+      margin-bottom: 1.5rem;
+      font-size: 1.5rem;
+      letter-spacing: 1px;
+    }
+    .input-field {
+      width: 100%;
+      padding: 0.8rem;
+      font-size: 1rem;
+      margin: 0.8rem 0;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      outline: none;
+      transition: border 0.3s ease;
+    }
+    .input-field:focus {
+      border-color: #800000;
+    }
+    .login-submit {
+      background-color: #800000;
+      color: #fff;
+      border: none;
+      padding: 0.8rem;
+      width: 100%;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: bold;
+      transition: background 0.3s ease;
+      margin-top: 1rem;
+    }
+    .login-submit:hover {
+      background-color: #660000;
+    }
+    @media (max-width: 768px) {
+      .login-btn {
+        font-size: 1rem;
+        padding: 0.6rem 1.5rem;
+      }
+      .login-box {
+        padding: 1.5rem 2rem;
+      }
+      .login-box h2 {
+        font-size: 1.3rem;
+      }
+      .input-field, .login-submit {
+        font-size: 0.9rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Background Video -->
+  <video autoplay muted loop id="bg-video">
+    <source src="/background.webm" type="video/mp4">
+    Your browser does not support the video tag.
+  </video>
+
+  <div class="top-section">
+    <img src="/title.png" alt="Title" class="title">
+  </div>
+
+  <div class="login-container">
+    <button class="login-btn" onclick="showLogin()">LOGIN</button>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="login-box">
+      <h2>Admin Login</h2>
+      <input type="email" id="email" class="input-field" placeholder="Email" required>
+      <input type="password" id="password" class="input-field" placeholder="Password" required>
+      <button class="login-submit" onclick="login()">Login</button>
+      <p id="error-message" style="color: red; margin-top: 10px;"></p>
+    </div>
+  </div>
+
+  <script>
+    function showLogin() {
+      document.getElementById('overlay').style.display = 'flex';
+    }
+
+    function hideLogin() {
+      document.getElementById('overlay').style.display = 'none';
+    }
+
+    async function login() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const errorMessage = document.getElementById('error-message');
+
+      if (!email || !password) {
+        errorMessage.innerText = "Please fill in both fields.";
+        return;
+      }
+
+      try {
+        const response = await fetch('http://localhost:3000/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          alert(data.message);
+          window.location.href = 'date.html'; 
+        } else {
+          errorMessage.innerText = data.message;
+        }
+      } catch (error) {
+        errorMessage.innerText = "An error occurred. Please try again.";
+        console.error(error);
+      }
+    }
+  </script>
+
+</body>
+</html>

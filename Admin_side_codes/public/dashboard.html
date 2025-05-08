@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Include jsPDF and html2canvas from CDNs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      background-color: #f5f6fa;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      text-align: center;
+    }
+    .header {
+    background-color: #c80c4c;
+    color: white;
+    padding: 10px 20px; /* Reduced padding */
+    display: flex;
+    justify-content: center; /* Center the title image */
+    align-items: center;
+    position: relative; /* Needed for absolute positioning */
+    box-shadow: 0px 3px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .logo {
+    height: 40px; /* Reduced size */
+    position: absolute;
+    left: 20px; /* Keep the logo on the left */
+  }
+
+  .title {
+    height: 40px; /* Adjusted for consistency */
+  }
+    
+    .welcome-message {
+      font-size: 24px;
+      font-weight: bold;
+      color: #a01736;
+      margin-top: 20px;
+      margin-bottom: 20px;
+    }
+    .class-attendance {
+      font-size: 18px;
+      font-weight: bold;
+      color: #333;
+      text-align: center;
+      padding-left: 20px;
+    }
+    .chart-container {
+      display: flex;
+      justify-content: center;
+      gap: 40px; /* Increased spacing between pie charts */
+      margin-top: 30px;
+      flex-wrap: wrap;
+    }
+    .chart-box {
+      width: 250px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .legend {
+      margin-top: 10px;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+    }
+    .legend span {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .legend .box {
+      width: 12px;
+      height: 12px;
+      display: inline-block;
+    }
+    /* Bold and style subject label */
+    .subject-label {
+      font-weight: bold;
+      font-size: 1.1rem;
+      color: #333;
+      margin-top: 8px;
+    }
+    .button-container {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin: 40px auto;
+      flex-wrap: wrap;
+    }
+    .view-report-btn,
+    .pdf-report-btn {
+      padding: 10px 20px;
+      font-size: 16px;
+      font-weight: bold;
+      color: white;
+      background-color: #a01736;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+      transition: 0.3s;
+    }
+    .view-report-btn:hover,
+    .pdf-report-btn:hover {
+      background-color: white;
+      color: #a01736;
+      border: 2px solid #a01736;
+    }
+    .red-row td {
+      background-color: #ffcccc !important;
+    }
+    .footer {
+      margin-top: auto;
+      background: white;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      color: #333;
+    }
+    /* Styles for the report table */
+    .report-container {
+      display: none; /* Initially hidden */
+      margin: 20px auto;
+      width: 90%;
+    }
+    .report-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .report-table th, .report-table td {
+      padding: 12px 15px;
+      border: 1px solid #ddd;
+    }
+    .report-table th {
+      background-color: #a01736;
+      color: white;
+      text-align: center;
+      cursor: pointer;
+    }
+    .report-table td {
+      background-color: #fff;
+      color: #333;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <img src="/logo.jpg" alt="Logo" class="logo" />
+    <img src="/title.png" alt="Title" class="title" />
+  </div>
+
+  <div class="welcome-message" id="welcomeMessage">
+    Welcome Student
+  </div>
+
+  <div class="class-attendance">
+    Class Attendance
+  </div>
+
+  <!-- Container for dynamically generated pie charts -->
+  <div class="chart-container" id="chartContainer">
+    <!-- Charts will be inserted here -->
+  </div>
+
+  <!-- Container for the detailed report table -->
+  <div class="report-container" id="reportContainer">
+    <!-- Table will be inserted here -->
+  </div>
+
+  <!-- Button container for report actions -->
+  <div class="button-container" id="buttonContainer">
+    <button class="view-report-btn" onclick="viewReport()">View Attendance Report</button>
+    <!-- PDF button will be added dynamically after report is shown -->
+  </div>
+
+  <div class="footer">
+    <span>&copy; 2025</span>
+    <span>Team 369</span>
+  </div>
+
+  <script>
+    // Global variables for sorting and report data storage
+    let currentReportData = [];
+    let dateSortAsc = true;
+    let subjectSortAsc = true;
+
+    // Utility: Get query parameter from URL
+    function getQueryParam(param) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(param);
+    }
+
+    // On window load, set welcome message and fetch attendance data for charts
+    window.onload = function () {
+      const studentName = getQueryParam('name') || 'Student';
+      document.getElementById('welcomeMessage').textContent = `Welcome ${studentName}`;
+
+      // Fetch attendance data for this student from the server
+      fetch(`/attendance?name=${encodeURIComponent(studentName)}`)
+        .then(response => response.json())
+        .then(data => {
+          console.log("Attendance data received:", data); // Debug log
+          const chartContainer = document.getElementById('chartContainer');
+          chartContainer.innerHTML = ''; // Clear any existing charts
+
+          // Check if data is empty and show a message if so
+          if (Object.keys(data).length === 0) {
+            chartContainer.innerHTML = '<p>No attendance data available.</p>';
+            return;
+          }
+
+          // data is an object: { subjectName: { present, absent } }
+          for (const subject in data) {
+            // Create chart box container
+            const chartBox = document.createElement('div');
+            chartBox.className = 'chart-box';
+
+            // Create canvas for Chart.js and set explicit dimensions
+            const canvas = document.createElement('canvas');
+            canvas.width = 250;
+            canvas.height = 250;
+            const canvasId = 'chart_' + subject.replace(/\s/g, '_');
+            canvas.id = canvasId;
+            chartBox.appendChild(canvas);
+
+            // Create legend with percentage values
+            const legend = document.createElement('div');
+            legend.className = 'legend';
+            legend.innerHTML = `
+              <span><span class="box" style="background:#28a745;"></span> Present (${data[subject].present}%)</span>
+              <span><span class="box" style="background:#dc3545;"></span> Absent (${data[subject].absent}%)</span>
+            `;
+            chartBox.appendChild(legend);
+
+            // Subject label (bold)
+            const subjectLabel = document.createElement('p');
+            subjectLabel.textContent = subject;
+            subjectLabel.className = 'subject-label';
+            chartBox.appendChild(subjectLabel);
+
+            chartContainer.appendChild(chartBox);
+
+            // Generate the pie chart using the attendance data
+            const ctx = canvas.getContext('2d');
+            new Chart(ctx, {
+              type: 'pie',
+              data: {
+                labels: ['Present', 'Absent'],
+                datasets: [{
+                  data: [
+                    parseFloat(data[subject].present),
+                    parseFloat(data[subject].absent)
+                  ],
+                  backgroundColor: ['#28a745', '#dc3545']
+                }]
+              },
+              options: {
+                plugins: {
+                  tooltip: {
+                    callbacks: {
+                      label: function(context) {
+                        let label = context.label || '';
+                        if (label) {
+                          label += ': ';
+                        }
+                        label += context.parsed + '%';
+                        return label;
+                      }
+                    }
+                  }
+                }
+              }
+            });
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching attendance data:', error);
+        });
+    };
+
+    // Render table function: builds table HTML and attaches sorting events with indicators.
+    function renderTable(data) {
+      // Build header with sort indicators
+      const dateArrow = dateSortAsc ? '▲' : '▼';
+      const subjectArrow = subjectSortAsc ? '▲' : '▼';
+      let tableHTML = `<table class="report-table">
+                         <thead>
+                           <tr>
+                             <th id="headerDate">Date ${dateArrow}</th>
+                             <th>Class</th>
+                             <th id="headerSubject">Subject ${subjectArrow}</th>
+                             <th>From</th>
+                             <th>To</th>
+                             <th>Total Hours</th>
+                             <th>Actual Hours</th>
+                           </tr>
+                         </thead>
+                         <tbody>`;
+      data.forEach(record => {
+        const totalHours = parseFloat(record["Total Hours"]);
+        const rowClass = totalHours === 0.00 ? 'red-row' : '';
+        tableHTML += `<tr class="${rowClass}">
+                        <td>${record.Date}</td>
+                        <td>${record.Class}</td>
+                        <td>${record.Subject}</td>
+                        <td>${record.From}</td>
+                        <td>${record.To}</td>
+                        <td>${record["Total Hours"]}</td>
+                        <td>${record["Actual Hours"]}</td>
+                      </tr>`;
+      });
+      tableHTML += `</tbody></table>`;
+      document.getElementById('reportContainer').innerHTML = tableHTML;
+
+      // Attach sorting events for Date and Subject headers
+      document.getElementById('headerDate').addEventListener('click', function() {
+        dateSortAsc = !dateSortAsc;
+        currentReportData.sort((a, b) => {
+          const dateA = new Date(a.Date);
+          const dateB = new Date(b.Date);
+          return dateSortAsc ? dateA - dateB : dateB - dateA;
+        });
+        renderTable(currentReportData);
+      });
+      
+      document.getElementById('headerSubject').addEventListener('click', function() {
+        subjectSortAsc = !subjectSortAsc;
+        currentReportData.sort((a, b) => {
+          const subjectA = a.Subject.toUpperCase();
+          const subjectB = b.Subject.toUpperCase();
+          if (subjectA < subjectB) return subjectSortAsc ? -1 : 1;
+          if (subjectA > subjectB) return subjectSortAsc ? 1 : -1;
+          return 0;
+        });
+        renderTable(currentReportData);
+      });
+    }
+
+    // View report: Fetch detailed records, render table with sorting,
+    // remove the "View Attendance Report" button, and add PDF button.
+    function viewReport() {
+      const studentName = getQueryParam('name') || 'Student';
+      fetch(`/attendanceReport?name=${encodeURIComponent(studentName)}`)
+        .then(response => response.json())
+        .then(data => {
+          // Store fetched data globally for sorting
+          currentReportData = data;
+          
+          // Sort data initially by date ascending
+          currentReportData.sort((a, b) => new Date(a.Date) - new Date(b.Date));
+          renderTable(currentReportData);
+          
+          // Show the report container and hide chart container
+          document.getElementById('chartContainer').style.display = 'none';
+          const reportContainer = document.getElementById('reportContainer');
+          reportContainer.style.display = 'block';
+
+          // Remove the "View Attendance Report" button once clicked
+          const viewBtn = document.querySelector('.view-report-btn');
+          if (viewBtn) {
+            viewBtn.remove();
+          }
+
+          // Add "Generate PDF Report" button if not already added
+          if (!document.getElementById('pdfBtn')) {
+            const pdfButton = document.createElement('button');
+            pdfButton.id = 'pdfBtn';
+            pdfButton.className = 'pdf-report-btn';
+            pdfButton.textContent = 'Generate PDF Report';
+            pdfButton.onclick = generatePDF;
+            document.getElementById('buttonContainer').appendChild(pdfButton);
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching report data:', error);
+        });
+    }
+
+    // Function to generate PDF from the report container and auto-download it.
+    function generatePDF() {
+      const reportElement = document.getElementById('reportContainer');
+      // Use html2canvas to capture the report container
+      html2canvas(reportElement, { scale: 2 }).then(canvas => {
+        const imgData = canvas.toDataURL('image/png');
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const imgProps = pdf.getImageProperties(imgData);
+        const imgWidth = pdfWidth;
+        const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+
+        // Add header with student name only
+        const studentName = getQueryParam('name') || 'Student';
+        pdf.setFontSize(16);
+        pdf.text(`Attendance Report for ${studentName}`, 10, 15);
+        pdf.addImage(imgData, 'PNG', 0, 30, imgWidth, imgHeight);
+        // Automatically download the PDF
+        pdf.save('Attendance_Report.pdf');
+      });
+    }
+
+    // Utility: Get query parameter from URL (repeated here for clarity)
+    function getQueryParam(param) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(param);
+    }
+  </script>
+</body>
+</html>
